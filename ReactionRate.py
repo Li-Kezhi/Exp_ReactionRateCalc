@@ -6,7 +6,7 @@ Reaction rate post-treatment script
 
 __author__ = "LI Kezhi"
 __date__ = "$2017-03-05$"
-__version__ = "1.0.1"
+__version__ = "1.0.2"
 
 
 import math
@@ -16,7 +16,8 @@ import matplotlib.pyplot as plt
 import mpltex
 
 
-##### Preparation #####
+#####################################
+##### User Input #####
 # File names
 SOURCE_NAME = './Examples/Industry1.txt'
 
@@ -36,7 +37,12 @@ TIME = (60, 110, 160, 210,
 # File formatting
 DATA_ROW = (10, 19, 7, 13, 16, 4) # Correspond to NAME sequence
 
-# Read data
+# Data manipulating
+AVE_RANGE = 25 # The time range used for averaging the data, unit: min
+#####################################
+
+
+##### Read data #####
 data = np.loadtxt(SOURCE_NAME, skiprows=1, usecols=DATA_ROW)
 
 x = np.zeros_like(data)
@@ -81,9 +87,9 @@ for i in xrange(len(TEMPERATURE)):
     linePosition.append(int(time_i/SANNING_SPEED))
 
     for index, item in enumerate(NAME):
-        ave[item][i] = np.average(data[linePosition[i]-25:linePosition[i],
+        ave[item][i] = np.average(data[linePosition[i]-AVE_RANGE:linePosition[i],
                                        index])
-        std[item][i] = abs(np.std(data[linePosition[i]-25:linePosition[i], 0],
+        std[item][i] = abs(np.std(data[linePosition[i]-AVE_RANGE:linePosition[i], 0],
                                   ddof=index))
 
     # Conversion ratio
