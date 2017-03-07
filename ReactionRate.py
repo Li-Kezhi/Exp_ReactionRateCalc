@@ -6,7 +6,7 @@ Reaction rate post-treatment script
 
 __author__ = "LI Kezhi"
 __date__ = "$2017-03-05$"
-__version__ = "1.0.2"
+__version__ = "1.0.3"
 
 
 import math
@@ -38,7 +38,7 @@ TIME = (60, 110, 160, 210,
 DATA_ROW = (10, 19, 7, 13, 16, 4) # Correspond to NAME sequence
 
 # Data manipulating
-AVE_RANGE = 25 # The time range used for averaging the data, unit: min
+AVE_RANGE = 25 # The data range used for averaging the data, unit: lines/points
 #####################################
 
 
