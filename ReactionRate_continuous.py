@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
 """
-Reaction rate post-treatment script for continuous experiments
+Reaction rate post-treatment script
 """
 
 __author__ = "LI Kezhi"
 __date__ = "$2017-07-04$"
-__version__ = "1.0.4"
+__version__ = "1.0.5"
 
 
 import math
@@ -24,7 +24,7 @@ SOURCE_NAME = './Fe.txt'
 # Experiment details
 NAME = ('NO', 'NH3', 'N2O', 'NO2') # The conversion ratio of 1st gas is calculated!
 BACKGROUND = dict(zip(NAME, (503, 552, 1.5, 19)))
-FLOAT_RATE = 83.33  # ml/min
+FLOW_RATE = 83.33  # ml/min
 MASS = 0.05  # g
 BET = 100  # m^2/g
 CONCENTRATION = BACKGROUND[NAME[0]] * 1e-6
@@ -49,8 +49,57 @@ def time2temprature(minute):
 # File formatting
 DATA_ROW = (4, 3, 5, 6) # Correspond to NAME sequence
 
-# Report
-CALCULATE_REACTION_RATE = False
+# Data manipulation
+FUNCTIONS_NAME = (
+    'conversionratio',
+    'reactionrate',
+    'lnr',
+    'T_inv',
+)
+FUNCTIONS_DISPLAY = (
+    'ConversionRatio(%)',
+    'ReactionRate(mol s-1 m-2)',
+    'lnr',
+    r'1/T',
+)
+def conversionratio(conc, bg):
+    '''
+    return conversion ratio (%)
+    '''
+    result = (1 - conc / bg) * 100
+    try:
+        assert result < 100
+    except AssertionError:
+        result = 99.99999
+    return result
+def reactionrate(conv, conc):
+    '''
+    return reaction rate (mol s-1 m-2)
+    '''
+    try:
+        result = -FLOW_RATE * (1E-3/60) * (1/22.4) / (MASS * BET) * math.log(1 - conv/100) * conc
+        # k = - F/(m * S_BET) * ln(1 - X) * C
+    except ValueError:
+        result = np.NaN
+    return result
+def lnr(rate):
+    '''
+    return log of reaction rate
+    '''
+    try:
+        result = math.log(rate)
+    except ValueError:
+        result = np.NaN
+    return result
+def T_inv(temp):
+    '''
+    return inverse of temperature
+    '''
+    if temperature[-1] is None:
+        result = np.NaN
+    else:
+        result = 1 / (273.15 + temp)
+    return result
 
 #####################################
 
@@ -85,42 +134,30 @@ def plot(data, SOURCE_NAME):
 concentration = {} # concentration
 for item in NAME:
     concentration[item] = []
-conversionRatio = []
 temperature = []
-if CALCULATE_REACTION_RATE is True:
-    reactionRate = []
-    lnr = []
-    T_inv = []
+calculationResults = {}
+for item in FUNCTIONS_NAME:
+    calculationResults[item] = []
 
 for lineNum, line in enumerate(data):
-    temperature.append(time2temprature(lineNum * SCANNING_SPEED))
+    temperature.append(
+        time2temprature(lineNum * SCANNING_SPEED)
+    )
     for i, item in enumerate(NAME):
         concentration[item].append(line[i])
-
-    # Conversion ratio
-    conversionRatio.append((1 - concentration[NAME[0]][-1] / BACKGROUND[NAME[0]]) * 100)  # X = 1 - C / C0
-    try:
-        assert conversionRatio[-1] < 100
-    except AssertionError:
-        conversionRatio[-1] = 99.99999
-    if CALCULATE_REACTION_RATE is True:
-        # Reaction rate constant
-        try:
-            reactionRate.append(
-                -FLOAT_RATE * (1E-3/60) * (1/22.4) / (MASS * BET) * math.log(1 - conversionRatio[-1]/100) * CONCENTRATION
-            )
-            # k = - F/(m * S_BET) * ln(1 - X) * C
-        except ValueError:
-            reactionRate.append(np.NaN)
-        # lnr - 1/T
-        try:
-            lnr.append(math.log(reactionRate[-1]))
-        except ValueError:
-            lnr.append(np.NaN)
-        if temperature[-1] is None:
-            T_inv.append(np.NaN)
-        else:
-            T_inv.append(1 / (273.15 + temperature[-1]))
+    # Calculations
+    calculationResults['conversionratio'].append(
+        conversionratio(concentration[NAME[0]][-1], BACKGROUND[NAME[0]])
+    )
+    calculationResults['reactionrate'].append(
+        reactionrate(calculationResults['conversionratio'][-1], concentration[NAME[0]][-1])
+    )
+    calculationResults['lnr'].append(
+        lnr(calculationResults['reactionrate'][-1])
+    )
+    calculationResults['T_inv'].append(
+        T_inv(temperature[-1])
+    )
 
 # Generate Report
 reportName = SOURCE_NAME.split('.txt')[0] + '_report.txt'
@@ -129,13 +166,8 @@ headLine = 'Temperature(C)  '
 for item in NAME:
     headLine += item
     headLine += '(ppm)  '
-headLine += 'ConvertionRatio(%)  '
-if CALCULATE_REACTION_RATE is True:
-    headLine += (
-        'ReactionRate(mol s-1 m-2)  ' +
-        'lnr   ' +
-        '1/T'
-    )
+for item in FUNCTIONS_DISPLAY:
+    headLine += item + '   '
 headLine += '\n'
 output.write(headLine)
 for i, temp_i in enumerate(temperature):
@@ -144,11 +176,11 @@ for i, temp_i in enumerate(temperature):
     dataLine = '%3d   ' % temp_i
     for item in NAME:
         dataLine += '%9.4f   ' % concentration[item][i]
-    dataLine += '%6.4f   ' % conversionRatio[i]
-    if CALCULATE_REACTION_RATE is True:
-        dataLine += '%6.4e   ' % reactionRate[i]
-        dataLine += '%6.4f   ' % lnr[i]
-        dataLine += '%9.7f' % T_inv[i]
+    for item in FUNCTIONS_NAME:
+        if item is 'reactionrate':
+            dataLine += '%6.4e   ' % calculationResults[item][i]
+        else:
+            dataLine += '%9.7f   ' % calculationResults[item][i]
     dataLine += '\n'
     output.write(dataLine)
 output.close()
