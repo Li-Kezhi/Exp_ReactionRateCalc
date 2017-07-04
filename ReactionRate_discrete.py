@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Reaction rate post-treatment script
+Reaction rate post-treatment script for discrete steady experiments
 """
 
 __author__ = "LI Kezhi"
