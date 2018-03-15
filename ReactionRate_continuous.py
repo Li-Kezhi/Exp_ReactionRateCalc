@@ -75,9 +75,10 @@ def conversionratio(conc, bg):
 def reactionrate(conv, conc):
     '''
     return reaction rate (mol s-1 m-2)
+    conc in ppm unit
     '''
     try:
-        result = -FLOW_RATE * (1E-3/60) * (1/22.4) / (MASS * BET) * math.log(1 - conv/100) * conc
+        result = -FLOW_RATE * (1E-3/60) * (1/22.4) / (MASS * BET) * math.log(1 - conv/100) * conc * 1e-6
         # k = - F/(m * S_BET) * ln(1 - X) * C
     except ValueError:
         result = np.NaN
